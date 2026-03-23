@@ -177,6 +177,26 @@ export type Effect =
   | RelationshipEffect;
 
 // ---------------------------------------------------------------------------
+// Delayed Effects: future consequence queue
+// ---------------------------------------------------------------------------
+
+/** A scheduled effect that fires at a future age. */
+export interface DelayedEffect {
+  readonly id: string;
+  readonly sourceEventId: string;
+  readonly sourceChoiceId: string;
+  readonly sourceAge: number;
+  readonly targetAge: number;
+  readonly effect: Effect;
+  /** 0-1, chance this actually fires. Default 1.0. */
+  readonly probability: number;
+  /** Narrative text connecting this to the original choice. */
+  readonly narrative: string;
+  fired: boolean;
+  expired: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Composite: Full Character State
 // ---------------------------------------------------------------------------
 
