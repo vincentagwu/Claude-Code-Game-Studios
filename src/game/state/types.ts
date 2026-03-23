@@ -133,6 +133,50 @@ export interface DerivedFlags {
 }
 
 // ---------------------------------------------------------------------------
+// Effects: State modification operations
+// ---------------------------------------------------------------------------
+
+/** How an attribute value is modified. */
+export type EffectOperation = "add" | "multiply" | "set";
+
+/** A single attribute modification. */
+export interface AttributeEffect {
+  readonly type: "attribute";
+  readonly target: AttributeName;
+  readonly operation: EffectOperation;
+  readonly value: number;
+}
+
+/** A personality spectrum shift. Inertia is applied automatically. */
+export interface SpectrumEffect {
+  readonly type: "spectrum";
+  readonly target: SpectrumName;
+  readonly delta: number;
+}
+
+/** Adds a tag to the character's life story. */
+export interface TagEffect {
+  readonly type: "tag";
+  readonly tagId: string;
+  readonly category: TagCategory;
+}
+
+/** Modifies a relationship's closeness or status. */
+export interface RelationshipEffect {
+  readonly type: "relationship";
+  readonly relationshipId: string;
+  readonly closenessChange?: number;
+  readonly newStatus?: RelationshipStatus;
+}
+
+/** Union of all effect types that can be applied to a character. */
+export type Effect =
+  | AttributeEffect
+  | SpectrumEffect
+  | TagEffect
+  | RelationshipEffect;
+
+// ---------------------------------------------------------------------------
 // Composite: Full Character State
 // ---------------------------------------------------------------------------
 
