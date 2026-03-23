@@ -124,10 +124,13 @@ export function useTimelineRunner(
       const choice = choices.find((c) => c.id === choiceId);
 
       if (choice) {
-        // Apply choice effects
+        // Snapshot attributes before effects for hint generation
+        const charBefore = useGameStore.getState().character!;
+        const attrsBefore = { ...charBefore.attributes };
+
+        // Apply choice effects with magnitude scaling
         for (const eff of choice.effects) {
           if (eff.delay && eff.delay > 0) {
-            // Schedule delayed effect
             const character = useGameStore.getState().character!;
             delayedEffects.current.push({
               id: `de_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -142,19 +145,51 @@ export function useTimelineRunner(
               expired: false,
             });
           } else {
-            useGameStore.getState().applyEffect(convertChoiceEffect(eff));
+            const converted = convertChoiceEffect(eff);
+            // Apply magnitude scaling for attribute effects
+            if (converted.type === "attribute" && converted.operation === "add") {
+              const scaled = scaleEffectMagnitude(
+                converted.value,
+                converted.target,
+                useGameStore.getState().character!.attributes
+              );
+              useGameStore.getState().applyEffect({
+                ...converted,
+                value: scaled,
+              });
+            } else {
+              useGameStore.getState().applyEffect(converted);
+            }
           }
         }
 
         // Add the major event entry with the choice narrative
+        const currentAge = useGameStore.getState().character!.identity.currentAge;
         const choiceEntry: TimelineEntry = {
           id: `entry_choice_${Date.now()}`,
-          age: useGameStore.getState().character!.identity.currentAge,
+          age: currentAge,
           type: "major_event",
           text: choice.narrative,
           event: pendingEvent,
         };
-        setEntries((prev) => [...prev, choiceEntry]);
+
+        // Generate consequence hints for significant attribute changes
+        const attrsAfter = useGameStore.getState().character!.attributes;
+        const hintEntries: TimelineEntry[] = [];
+        for (const key of Object.keys(attrsBefore) as (keyof typeof attrsBefore)[]) {
+          const delta = attrsAfter[key] - attrsBefore[key];
+          const hint = getConsequenceHint(key, delta);
+          if (hint) {
+            hintEntries.push({
+              id: `entry_hint_${Date.now()}_${key}`,
+              age: currentAge,
+              type: "minor_event",
+              text: hint,
+            });
+          }
+        }
+
+        setEntries((prev) => [...prev, choiceEntry, ...hintEntries]);
       }
 
       setPendingEvent(null);
@@ -249,6 +284,7 @@ export function useTimelineRunner(
 
 import type { EventEffect } from "../events/types";
 import type { Effect } from "../state/types";
+import { scaleEffectMagnitude, getConsequenceHint } from "../state/magnitudeScaling";
 
 function convertChoiceEffect(eff: EventEffect): Effect {
   if (eff.type === "attribute") {

@@ -9,12 +9,14 @@ import { getDisplayBucket } from "@/game/state/displayBuckets";
 import { DashboardPanel } from "@/components/DashboardPanel";
 import { MINOR_EVENT_TEMPLATES } from "@/game/data/minorEvents";
 import { MAJOR_EVENTS } from "@/game/data/majorEvents";
+import { EARLY_LIFE_EVENTS } from "@/game/data/earlyLifeEvents";
 import { FALLBACK_EVENTS } from "@/game/data/fallbackEvents";
 import { LATER_MINOR_EVENTS, LATER_MAJOR_EVENTS_EXPORT } from "@/game/data/laterLifeEvents";
 import type { LifeEvent } from "@/game/events/types";
 import type { TimelineEntry } from "@/game/engine/timelineEngine";
 
 const ALL_EVENTS: readonly LifeEvent[] = [
+  ...EARLY_LIFE_EVENTS,
   ...MINOR_EVENT_TEMPLATES,
   ...MAJOR_EVENTS,
   ...LATER_MINOR_EVENTS,
@@ -194,13 +196,24 @@ function TimelineEntryRow({ entry }: { entry: TimelineEntry }) {
           ? "bg-foreground/10"
           : "bg-foreground/30";
 
+  const isEcho = entry.type === "echo_event";
+
   return (
     <div className="flex items-start gap-3 py-1.5">
       <span className="w-8 text-right text-xs text-foreground/40 pt-0.5 shrink-0">
         {entry.age}
       </span>
       <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
-      <p className="text-sm leading-relaxed text-foreground/80">{entry.text}</p>
+      <p
+        className={`text-sm leading-relaxed ${
+          isEcho
+            ? "text-purple-500 dark:text-purple-400 italic"
+            : "text-foreground/80"
+        }`}
+      >
+        {isEcho && <span className="text-purple-400/60 mr-1">Years ago... </span>}
+        {entry.text}
+      </p>
     </div>
   );
 }
@@ -224,19 +237,32 @@ function MajorEventOverlay({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="max-w-lg w-full mx-4 bg-background rounded-2xl p-6 shadow-2xl space-y-5">
-        {/* Dialogue lines */}
+        {/* Dialogue lines (visual novel format) */}
         {dialogue.length > 0 && (
           <div className="space-y-3">
             {dialogue.map((line, i) => (
-              <p key={i} className="text-sm leading-relaxed text-foreground/80 italic">
-                {line.text}
-              </p>
+              <div key={i} className="space-y-0.5">
+                {line.speaker !== "Narrator" && (
+                  <span className="text-xs font-semibold uppercase tracking-wide text-foreground/40">
+                    {line.speaker}
+                  </span>
+                )}
+                <p
+                  className={`text-sm leading-relaxed ${
+                    line.speaker === "Narrator"
+                      ? "text-foreground/70 italic"
+                      : "text-foreground/90"
+                  } ${line.emotion === "emotional" ? "font-medium" : ""}`}
+                >
+                  {line.text}
+                </p>
+              </div>
             ))}
           </div>
         )}
 
-        {/* Setup text */}
-        {setup && (
+        {/* Setup text (scenario card format) */}
+        {setup && !dialogue.length && (
           <p className="text-sm leading-relaxed">{setup}</p>
         )}
 
