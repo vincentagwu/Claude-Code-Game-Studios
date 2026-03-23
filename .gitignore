@@ -20,6 +20,20 @@ production/session-state/*.md
 docs/IMPROVEMENTS-PROPOSAL.md
 docs/MULTI-STAGE-DOCUMENT-WORKFLOW.md
 
+# === Next.js ===
+/.next/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+/coverage
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+
 # === Build Output ===
 build/
 builds/

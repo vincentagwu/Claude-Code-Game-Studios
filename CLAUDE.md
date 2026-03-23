@@ -5,22 +5,24 @@ Each agent owns a specific domain, enforcing separation of concerns and quality.
 
 ## Technology Stack
 
-- **Engine**: [CHOOSE: Godot 4 / Unity / Unreal Engine 5]
-- **Language**: [CHOOSE: GDScript / C# / C++ / Blueprint]
+- **Engine**: Web-native (no game engine — narrative/UI-driven application)
+- **Framework**: Next.js 15 (React 19)
+- **Language**: TypeScript
 - **Version Control**: Git with trunk-based development
-- **Build System**: [SPECIFY after choosing engine]
-- **Asset Pipeline**: [SPECIFY after choosing engine]
+- **Build System**: Next.js build + Turbopack (dev)
+- **Asset Pipeline**: Static assets + SVG illustrations; no traditional game asset pipeline
 
-> **Note**: Engine-specialist agents exist for Godot, Unity, and Unreal with
-> dedicated sub-specialists. Use the set matching your engine.
+> **Note**: This is a web-native project. Traditional game engine agents (Godot,
+> Unity, Unreal specialists) are not applicable. Use `ui-programmer`,
+> `gameplay-programmer`, and `technical-director` for architecture decisions.
 
 ## Project Structure
 
 @.claude/docs/directory-structure.md
 
-## Engine Version Reference
+## Stack Version Reference
 
-@docs/engine-reference/godot/VERSION.md
+@docs/engine-reference/web/VERSION.md
 
 ## Technical Preferences
 

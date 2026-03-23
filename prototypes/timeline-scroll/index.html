@@ -1,0 +1,752 @@
+<!-- PROTOTYPE - NOT FOR PRODUCTION -->
+<!-- Question: Is a scrolling timeline with variable pacing and event pop-ups a compelling core loop? -->
+<!-- Date: 2026-03-22 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LifePath — Timeline Scroll Prototype</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #FFF8F0;
+      --text: #333;
+      --accent: #F4C2C2;
+      --muted: #999;
+      --card-bg: #fff;
+      --transition-speed: 0.8s;
+    }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background var(--transition-speed), color var(--transition-speed);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* Header */
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      transition: background var(--transition-speed);
+    }
+
+    #age-display {
+      font-size: 1.4em;
+      font-weight: bold;
+      transition: color var(--transition-speed);
+    }
+
+    #stage-display {
+      font-size: 0.9em;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    #speed-indicator {
+      font-size: 0.75em;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 10px;
+      border: 1px solid var(--muted);
+      border-radius: 12px;
+    }
+    #speed-indicator:hover { background: rgba(0,0,0,0.05); }
+
+    /* Timeline */
+    #timeline {
+      position: fixed;
+      top: 60px;
+      bottom: 80px;
+      left: 0;
+      right: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 20px;
+      scroll-behavior: smooth;
+    }
+
+    .timeline-entry {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeIn 0.5s ease forwards;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .entry-age {
+      min-width: 50px;
+      text-align: right;
+      font-weight: bold;
+      color: var(--accent);
+      font-size: 0.9em;
+      padding-top: 2px;
+      transition: color var(--transition-speed);
+    }
+
+    .entry-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 6px;
+      flex-shrink: 0;
+      transition: background var(--transition-speed);
+    }
+
+    .entry-dot.major {
+      width: 14px;
+      height: 14px;
+      margin-top: 4px;
+      border-radius: 2px;
+      transform: rotate(45deg);
+    }
+
+    .entry-dot.micro {
+      border: 2px solid var(--accent);
+      background: transparent;
+    }
+
+    .entry-dot.stage-transition {
+      width: 100%;
+      height: 2px;
+      border-radius: 0;
+      margin-top: 10px;
+    }
+
+    .entry-text {
+      font-size: 0.95em;
+      line-height: 1.5;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .entry-text.dimmed {
+      opacity: 0.5;
+    }
+
+    /* Stage transition card */
+    .stage-card {
+      text-align: center;
+      padding: 16px;
+      margin: 20px auto;
+      max-width: 600px;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+      border-top: 1px solid var(--accent);
+      border-bottom: 1px solid var(--accent);
+      opacity: 0;
+      animation: fadeIn 0.8s ease forwards;
+    }
+
+    /* Micro-choice buttons (inline) */
+    .micro-choices {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .micro-choice-btn {
+      padding: 4px 12px;
+      font-size: 0.8em;
+      border: 1px solid var(--accent);
+      background: transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .micro-choice-btn:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Major event overlay (Scenario Card) */
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    #overlay.visible {
+      display: flex;
+      opacity: 1;
+    }
+
+    .scenario-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      transform: translateY(20px);
+      animation: slideUp 0.5s ease forwards;
+    }
+
+    @keyframes slideUp {
+      to { transform: translateY(0); }
+    }
+
+    .scenario-card h3 {
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .scenario-card .setup-text {
+      font-size: 1.1em;
+      line-height: 1.7;
+      margin-bottom: 24px;
+      font-style: italic;
+    }
+
+    .scenario-card .choice-btn {
+      display: block;
+      width: 100%;
+      padding: 14px 20px;
+      margin-bottom: 10px;
+      border: 2px solid var(--accent);
+      background: transparent;
+      border-radius: 10px;
+      font-size: 1em;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      color: var(--text);
+    }
+
+    .choice-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .consequence-text {
+      display: none;
+      font-size: 0.95em;
+      line-height: 1.6;
+      padding: 16px;
+      background: rgba(0,0,0,0.03);
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    /* Bottom bar */
+    #bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 20px;
+      text-align: center;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+
+    #tap-advance {
+      font-size: 0.85em;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 8px 24px;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 20px;
+      background: transparent;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    #tap-advance:hover { background: rgba(0,0,0,0.05); }
+    #tap-advance:active { transform: scale(0.97); }
+
+    /* Death screen */
+    #death-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #1a1a1a;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 300;
+      color: #ccc;
+      text-align: center;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #death-screen h2 {
+      font-size: 1.2em;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #999;
+    }
+
+    #death-screen .epitaph {
+      font-style: italic;
+      max-width: 400px;
+      line-height: 1.8;
+      font-size: 1em;
+    }
+
+    #death-screen button {
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: transparent;
+      border: 1px solid #666;
+      color: #ccc;
+      font-family: inherit;
+      font-size: 0.9em;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    /* Progress bar */
+    #life-progress {
+      position: fixed;
+      top: 58px;
+      left: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: width 0.3s ease, background var(--transition-speed);
+      z-index: 99;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <div>
+      <div id="age-display">Age 0</div>
+      <div id="stage-display">Infancy</div>
+    </div>
+    <div id="speed-indicator" onclick="skipAhead()">Tap to skip ▸</div>
+  </div>
+
+  <div id="life-progress" style="width: 0%"></div>
+
+  <div id="timeline"></div>
+
+  <div id="bottom-bar">
+    <button id="tap-advance" onclick="skipAhead()">Skip to next event ▸</button>
+  </div>
+
+  <div id="overlay">
+    <div class="scenario-card" id="scenario-card"></div>
+  </div>
+
+  <div id="death-screen">
+    <h2>A Life Lived</h2>
+    <div class="epitaph" id="epitaph-text"></div>
+    <button onclick="location.reload()">Live Again</button>
+  </div>
+
+<script>
+// PROTOTYPE - NOT FOR PRODUCTION
+// Question: Is timeline scroll with variable pacing a compelling core loop?
+// Date: 2026-03-22
+
+// ─── STAGE DEFINITIONS ───
+const STAGES = [
+  { name: "Infancy",         minAge: 0,  maxAge: 2,  yearsPerMin: 6.0, bg: "#FFF8F0", accent: "#F4C2C2", text: "#555" },
+  { name: "Early Childhood", minAge: 3,  maxAge: 5,  yearsPerMin: 4.0, bg: "#FFFFF0", accent: "#FFD700", text: "#444" },
+  { name: "Childhood",       minAge: 6,  maxAge: 11, yearsPerMin: 3.0, bg: "#F0FFF0", accent: "#4CAF50", text: "#333" },
+  { name: "Adolescence",     minAge: 12, maxAge: 17, yearsPerMin: 1.5, bg: "#1A1A2E", accent: "#FF5722", text: "#E0E0E0" },
+  { name: "Young Adult",     minAge: 18, maxAge: 25, yearsPerMin: 1.0, bg: "#FAFAFA", accent: "#2196F3", text: "#333" },
+  { name: "Adult",           minAge: 26, maxAge: 45, yearsPerMin: 1.5, bg: "#F5F0EB", accent: "#795548", text: "#333" },
+  { name: "Midlife",         minAge: 46, maxAge: 60, yearsPerMin: 1.0, bg: "#ECEFF1", accent: "#607D8B", text: "#444" },
+  { name: "Elder",           minAge: 61, maxAge: 99, yearsPerMin: 0.8, bg: "#FFF3E0", accent: "#9E9E9E", text: "#666" },
+];
+
+// ─── HARDCODED EVENTS ───
+const MINOR_EVENTS = {
+  0: ["You are born. Your mother holds you for the first time."],
+  1: ["You take your first steps. The world suddenly feels larger."],
+  2: ["You say your first word. It sounds like 'mama.'"],
+  3: ["Your first day of preschool. Everything is colorful and loud."],
+  4: ["You learn to count to ten.", "You make a friend named Amara."],
+  5: ["You lose your first tooth and put it under your pillow."],
+  6: ["First day of school. Your backpack is almost bigger than you.", "You discover you love drawing."],
+  7: ["You scraped your knee on the playground. Mom put a bandaid on it."],
+  8: ["You make your first best friend. His name is Marcus.", "The summer felt endless."],
+  9: ["You join the school soccer team."],
+  10: ["You read your first real book cover to cover.", "Your parents argue more often now."],
+  11: ["You start noticing the world is more complicated than you thought."],
+  12: ["Everything feels different this year. You're not a kid anymore.", "You get your first phone."],
+  13: ["You discover music that feels like it was written just for you."],
+  14: ["Your friend group shifts. Some friendships fade; new ones form.", "You stay up past midnight for the first time on purpose."],
+  15: ["You get your first part-time job at the corner store."],
+  16: ["You pass your driver's test on the second try."],
+  17: ["Senior year. Everything feels like 'the last time.'"],
+  18: ["You turn 18. Legally an adult, but you don't feel like one."],
+  19: ["Your first apartment. It's small, but it's yours."],
+  20: ["You meet someone who makes you see the world differently."],
+  21: ["A birthday that feels significant. Everyone says it should.", "You start thinking about what you actually want to do with your life."],
+  22: ["You take a trip somewhere you've never been."],
+  23: ["Work is demanding but you're learning fast."],
+  24: ["You lose touch with a friend you thought would be around forever."],
+  25: ["Quarter-life. You look back and barely recognize who you were at 18."],
+  28: ["You get promoted. The work is harder but the paycheck helps."],
+  30: ["Thirty. People keep asking about your plans."],
+  33: ["You buy your first real piece of furniture. Not from a college dorm — something that matters."],
+  35: ["You realize your parents are getting older."],
+  38: ["A colleague becomes a genuine friend."],
+  40: ["Forty. Time moves differently now."],
+  42: ["You wake up one morning and your back just... hurts. Welcome to adulthood."],
+  45: ["You accomplish something you'd been working toward for years."],
+  48: ["Your perspective on success has quietly shifted."],
+  50: ["Half a century. The view from here is different than you imagined."],
+  52: ["You reconnect with someone from your past."],
+  55: ["You start thinking about what you'll leave behind."],
+  58: ["A health scare. Everything snaps into focus."],
+  60: ["Sixty. The world is louder and faster, but you've learned to be still."],
+  63: ["Retirement is no longer abstract — it's a plan."],
+  65: ["You retire. The first Monday without an alarm feels strange."],
+  68: ["You have more time for the things that matter now."],
+  70: ["Seventy. You've outlived some of your heroes."],
+  73: ["A quiet afternoon. Tea, a book, and the sound of rain."],
+  75: ["Your memory holds onto the strangest details from decades ago."],
+  78: ["Some days are harder than others."],
+};
+
+// Micro-choices (age → { text, options })
+const MICRO_CHOICES = {
+  9: { text: "Your teacher asks if you want to join the science fair.", options: ["Yes!", "No thanks"] },
+  14: { text: "A friend dares you to sneak out after curfew.", options: ["Let's go", "Too risky"] },
+  22: { text: "Someone offers you a cigarette at a party.", options: ["Try it", "No thanks"] },
+  35: { text: "Your boss asks you to take on a big project. More pay, more stress.", options: ["I'll do it", "Not now"] },
+  52: { text: "An old friend calls out of the blue. Do you answer?", options: ["Pick up", "Let it ring"] },
+};
+
+// Major events (scenario cards)
+const MAJOR_EVENTS = {
+  18: {
+    title: "A Crossroads",
+    setup: "The acceptance letter sits on the kitchen table. Your parents exchange a look you can't quite read. This is the first decision that feels like it belongs entirely to you.",
+    choices: [
+      { label: "Accept — go to college", consequence: "You pack your bags with a mix of terror and excitement. The campus feels enormous on move-in day, but by the end of the first week, it starts to feel like possibility." },
+      { label: "Decline — enter the workforce", consequence: "You fold the letter and put it in a drawer. There's a world out there that doesn't require a classroom. You start looking for real work." },
+    ],
+  },
+  30: {
+    title: "A Question",
+    setup: "They're looking at you across the table, nervous and hopeful. The ring box is small. The question is not. The restaurant feels impossibly quiet.",
+    choices: [
+      { label: "Say yes", consequence: "Your hands are shaking as they slide the ring on. The restaurant erupts in applause from strangers. For once, you don't mind being the center of attention." },
+      { label: "Say you need time", consequence: "The look on their face. You'll remember it. You meant it gently, but some things can't be said gently enough. The ride home is silent." },
+    ],
+  },
+  45: {
+    title: "An Opportunity",
+    setup: "The offer is real: lead a team at a company across the country. Triple the responsibility, double the pay. But it means leaving everything you've built here — the house, the routines, the people who know your coffee order.",
+    choices: [
+      { label: "Take the leap", consequence: "You sell the house. The moving truck feels like a metaphor for something. The new city is overwhelming, but there's electricity in starting over." },
+      { label: "Stay where you are", consequence: "You turn it down. Some things are worth more than ambition. Your neighbor waves at you the next morning like nothing happened, and that feels right." },
+    ],
+  },
+};
+
+// ─── GAME STATE ───
+let currentAge = -1;
+let currentStage = STAGES[0];
+let isPaused = false;
+let tickTimer = null;
+let totalEventsShown = 0;
+let choicesMade = [];
+let startTime = Date.now();
+
+const timeline = document.getElementById("timeline");
+const ageDisplay = document.getElementById("age-display");
+const stageDisplay = document.getElementById("stage-display");
+const overlay = document.getElementById("overlay");
+const progressBar = document.getElementById("life-progress");
+
+// ─── CORE LOOP ───
+function getTickInterval() {
+  return (60 / currentStage.yearsPerMin) * 1000;
+}
+
+function getStageForAge(age) {
+  return STAGES.find(s => age >= s.minAge && age <= s.maxAge) || STAGES[STAGES.length - 1];
+}
+
+function updateTheme(stage) {
+  document.documentElement.style.setProperty("--bg", stage.bg);
+  document.documentElement.style.setProperty("--accent", stage.accent);
+  document.documentElement.style.setProperty("--text", stage.text);
+  document.body.style.background = stage.bg;
+}
+
+function addTimelineEntry(age, text, type = "minor") {
+  const entry = document.createElement("div");
+  entry.className = "timeline-entry";
+
+  const ageEl = document.createElement("div");
+  ageEl.className = "entry-age";
+  ageEl.textContent = `Age ${age}`;
+
+  const dot = document.createElement("div");
+  dot.className = `entry-dot ${type}`;
+
+  const textEl = document.createElement("div");
+  textEl.className = "entry-text";
+  textEl.textContent = text;
+
+  entry.appendChild(ageEl);
+  entry.appendChild(dot);
+  entry.appendChild(textEl);
+  timeline.appendChild(entry);
+
+  // Auto-scroll to bottom
+  setTimeout(() => {
+    timeline.scrollTop = timeline.scrollHeight;
+  }, 50);
+
+  totalEventsShown++;
+
+  // Dim older entries
+  const entries = timeline.querySelectorAll(".timeline-entry .entry-text");
+  entries.forEach((el, i) => {
+    if (i < entries.length - 4) el.classList.add("dimmed");
+    else el.classList.remove("dimmed");
+  });
+}
+
+function addStageTransition(fromStage, toStage) {
+  const card = document.createElement("div");
+  card.className = "stage-card";
+  card.textContent = `${fromStage.name} → ${toStage.name}`;
+  timeline.appendChild(card);
+  setTimeout(() => { timeline.scrollTop = timeline.scrollHeight; }, 50);
+}
+
+function addMicroChoice(age, data) {
+  const entry = document.createElement("div");
+  entry.className = "timeline-entry";
+
+  const ageEl = document.createElement("div");
+  ageEl.className = "entry-age";
+  ageEl.textContent = `Age ${age}`;
+
+  const dot = document.createElement("div");
+  dot.className = "entry-dot micro";
+
+  const textEl = document.createElement("div");
+  textEl.className = "entry-text";
+  textEl.textContent = data.text;
+
+  const btns = document.createElement("div");
+  btns.className = "micro-choices";
+  data.options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.className = "micro-choice-btn";
+    btn.textContent = opt;
+    btn.onclick = () => {
+      btns.innerHTML = `<em style="color:var(--muted);font-size:0.85em">You chose: ${opt}</em>`;
+      choicesMade.push({ age, type: "micro", choice: opt });
+    };
+    btns.appendChild(btn);
+  });
+  textEl.appendChild(btns);
+
+  // Auto-resolve after 3 seconds
+  setTimeout(() => {
+    if (btns.querySelector("button")) {
+      btns.innerHTML = `<em style="color:var(--muted);font-size:0.85em">You chose: ${data.options[0]} (auto)</em>`;
+      choicesMade.push({ age, type: "micro-auto", choice: data.options[0] });
+    }
+  }, 3000);
+
+  entry.appendChild(ageEl);
+  entry.appendChild(dot);
+  entry.appendChild(textEl);
+  timeline.appendChild(entry);
+  totalEventsShown++;
+  setTimeout(() => { timeline.scrollTop = timeline.scrollHeight; }, 50);
+}
+
+function showMajorEvent(age, data) {
+  isPaused = true;
+  clearTimeout(tickTimer);
+
+  const card = document.getElementById("scenario-card");
+  card.innerHTML = `
+    <h3>${data.title}</h3>
+    <div class="setup-text">${data.setup}</div>
+    <div id="choice-container">
+      ${data.choices.map((c, i) => `
+        <button class="choice-btn" onclick="handleMajorChoice(${age}, ${i})">${c.label}</button>
+      `).join("")}
+    </div>
+    <div class="consequence-text" id="consequence-text"></div>
+  `;
+
+  overlay.classList.add("visible");
+  overlay.style.display = "flex";
+  setTimeout(() => { overlay.style.opacity = "1"; }, 10);
+}
+
+window.handleMajorChoice = function(age, choiceIndex) {
+  const data = MAJOR_EVENTS[age];
+  const choice = data.choices[choiceIndex];
+  choicesMade.push({ age, type: "major", choice: choice.label });
+
+  // Hide choice buttons, show consequence
+  document.getElementById("choice-container").style.display = "none";
+  const conseq = document.getElementById("consequence-text");
+  conseq.textContent = choice.consequence;
+  conseq.style.display = "block";
+
+  // Add to timeline
+  addTimelineEntry(age, `★ ${choice.label}`, "major");
+
+  // Resume after reading consequence
+  setTimeout(() => {
+    overlay.style.opacity = "0";
+    setTimeout(() => {
+      overlay.classList.remove("visible");
+      overlay.style.display = "none";
+      isPaused = false;
+      tick();
+    }, 500);
+  }, 3000);
+};
+
+function checkDeath(age) {
+  if (age < 65) return false;
+  const baseRate = 0.02;
+  const acceleration = 0.03;
+  const chance = baseRate * (1 + (age - 65) * acceleration);
+  return Math.random() < chance;
+}
+
+function showDeath(age) {
+  const screen = document.getElementById("death-screen");
+  const epitaph = document.getElementById("epitaph-text");
+
+  const duration = ((Date.now() - startTime) / 1000).toFixed(0);
+  const majorCount = choicesMade.filter(c => c.type === "major").length;
+
+  epitaph.innerHTML = `
+    You lived to be ${age} years old.<br><br>
+    ${totalEventsShown} moments. ${choicesMade.length} choices made.<br>
+    ${majorCount} crossroads defined your path.<br><br>
+    Session time: ${duration} seconds.<br><br>
+    <em>Every choice echoed.</em>
+  `;
+
+  screen.style.display = "flex";
+}
+
+function tick() {
+  if (isPaused) return;
+
+  currentAge++;
+
+  // Death check
+  if (checkDeath(currentAge)) {
+    showDeath(currentAge);
+    return;
+  }
+
+  // Max age safety
+  if (currentAge > 95) {
+    showDeath(currentAge);
+    return;
+  }
+
+  // Stage transition
+  const newStage = getStageForAge(currentAge);
+  if (newStage !== currentStage) {
+    addStageTransition(currentStage, newStage);
+    currentStage = newStage;
+    updateTheme(currentStage);
+  }
+
+  // Update header
+  ageDisplay.textContent = `Age ${currentAge}`;
+  stageDisplay.textContent = currentStage.name;
+  progressBar.style.width = `${Math.min(currentAge / 80 * 100, 100)}%`;
+
+  // Major event check
+  if (MAJOR_EVENTS[currentAge]) {
+    // Show minor events first, then pause for major
+    if (MINOR_EVENTS[currentAge]) {
+      MINOR_EVENTS[currentAge].forEach(text => addTimelineEntry(currentAge, text));
+    }
+    setTimeout(() => showMajorEvent(currentAge, MAJOR_EVENTS[currentAge]), 800);
+    return;
+  }
+
+  // Micro-choice check
+  if (MICRO_CHOICES[currentAge]) {
+    addMicroChoice(currentAge, MICRO_CHOICES[currentAge]);
+  }
+
+  // Minor events
+  if (MINOR_EVENTS[currentAge]) {
+    const events = MINOR_EVENTS[currentAge];
+    events.forEach((text, i) => {
+      setTimeout(() => addTimelineEntry(currentAge, text), i * 400);
+    });
+  }
+
+  // Schedule next tick
+  tickTimer = setTimeout(tick, getTickInterval());
+}
+
+function skipAhead() {
+  if (isPaused) return;
+  clearTimeout(tickTimer);
+  tick();
+}
+
+// Keyboard shortcut: space to skip
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !isPaused) {
+    e.preventDefault();
+    skipAhead();
+  }
+});
+
+// ─── START ───
+updateTheme(STAGES[0]);
+tick();
+</script>
+
+</body>
+</html>
