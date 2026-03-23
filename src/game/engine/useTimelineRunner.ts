@@ -17,8 +17,12 @@ import {
   type TimelineEntry,
 } from "./timelineEngine";
 import { createEventHistory, type EventHistory } from "./lifeEventGenerator";
+import { generateEpitaph } from "./epitaphGenerator";
 import type { LifeEvent } from "../events/types";
 import type { DelayedEffect } from "../state/types";
+import type { BranchPoint } from "../tree/types";
+import { saveLifeRecord } from "../tree/lifeTreeStore";
+import { serialize, deserialize } from "../state/serialization";
 
 export type TimelineState = "running" | "paused" | "dead";
 
@@ -46,6 +50,8 @@ export function useTimelineRunner(
 
   const eventHistoryRef = useRef<EventHistory>(createEventHistory());
   const delayedEffects = useRef<DelayedEffect[]>([]);
+  const branchPointsRef = useRef<BranchPoint[]>([]);
+  const lifeIdRef = useRef(`life_${Date.now()}`);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPausedRef = useRef(false);
   const isDeadRef = useRef(false);
@@ -94,6 +100,22 @@ export function useTimelineRunner(
     if (result.isDead) {
       isDeadRef.current = true;
       setTimelineState("dead");
+
+      // Save completed life to the tree
+      const deadChar = useGameStore.getState().character;
+      if (deadChar) {
+        const epitaph = generateEpitaph(deadChar);
+        const regionTag = deadChar.tags.find((t) => t.id.startsWith("region_"));
+        saveLifeRecord({
+          id: lifeIdRef.current,
+          name: deadChar.identity.name,
+          deathAge: deadChar.identity.currentAge,
+          region: regionTag?.id ?? "unknown",
+          epitaph,
+          branchPoints: branchPointsRef.current,
+          completedAt: Date.now(),
+        });
+      }
       return;
     }
 
@@ -124,6 +146,25 @@ export function useTimelineRunner(
       const choice = choices.find((c) => c.id === choiceId);
 
       if (choice) {
+        // Capture branch point BEFORE applying effects
+        if (choice.branchPoint) {
+          const snapshot = useGameStore.getState().character!;
+          const alternateIds = choices
+            .filter((c) => c.id !== choiceId)
+            .map((c) => c.id);
+
+          branchPointsRef.current.push({
+            id: `bp_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            lifeId: lifeIdRef.current,
+            age: snapshot.identity.currentAge,
+            eventId: pendingEvent.id,
+            chosenOptionId: choiceId,
+            alternateOptionIds: alternateIds,
+            stateSnapshot: deserialize(serialize(snapshot)), // deep copy
+            explored: false,
+          });
+        }
+
         // Snapshot attributes before effects for hint generation
         const charBefore = useGameStore.getState().character!;
         const attrsBefore = { ...charBefore.attributes };
