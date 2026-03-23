@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { useGameStore } from "@/game/state/useGameStore";
 import { generateStartingConditions } from "@/game/state/startingConditions";
 import { loadGame, hasSaveGame, deleteSave } from "@/game/persistence/saveManager";
+import { loadLifeTree } from "@/game/tree/lifeTreeStore";
 
 export default function TitleScreen() {
   const router = useRouter();
   const [hasSave, setHasSave] = useState(false);
+  const [hasTree, setHasTree] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check for saved game on mount
+  // Check for saved game and tree on mount
   useEffect(() => {
-    hasSaveGame().then((exists) => {
-      setHasSave(exists);
+    Promise.all([hasSaveGame(), loadLifeTree()]).then(([saveExists, tree]) => {
+      setHasSave(saveExists);
+      setHasTree(tree.lives.length > 0);
       setLoading(false);
     });
   }, []);
@@ -55,6 +58,13 @@ export default function TitleScreen() {
           className="rounded-full border border-foreground/20 px-8 py-3 transition-colors hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           Continue
+        </button>
+        <button
+          onClick={() => router.push("/tree")}
+          disabled={!hasTree || loading}
+          className="rounded-full border border-foreground/20 px-8 py-3 transition-colors hover:bg-foreground/5 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          Explore Tree
         </button>
         <button
           onClick={() => router.push("/settings")}
