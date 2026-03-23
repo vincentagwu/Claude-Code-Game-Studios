@@ -13,6 +13,8 @@ import { FALLBACK_EVENTS } from "@/game/data/fallbackEvents";
 import { LATER_MINOR_EVENTS, LATER_MAJOR_EVENTS_EXPORT } from "@/game/data/laterLifeEvents";
 import { CRISIS_EVENTS } from "@/game/data/crisisEvents";
 import { MORE_CHILDHOOD_MINOR, MORE_CHILDHOOD_MAJOR } from "@/game/data/moreChildhoodEvents";
+import { MILESTONE_EVENTS } from "@/game/data/milestoneEvents";
+import { ADULT_MINOR_EVENTS } from "@/game/data/adultMinorEvents";
 import type { LifeEvent } from "@/game/events/types";
 import type { TimelineEntry } from "@/game/engine/timelineEngine";
 
@@ -25,6 +27,8 @@ const ALL_EVENTS: readonly LifeEvent[] = [
   ...LATER_MINOR_EVENTS,
   ...LATER_MAJOR_EVENTS_EXPORT,
   ...CRISIS_EVENTS,
+  ...MILESTONE_EVENTS,
+  ...ADULT_MINOR_EVENTS,
   ...FALLBACK_EVENTS,
 ];
 
@@ -124,9 +128,27 @@ function TimelineView() {
   // Auto-scroll to bottom as entries appear
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [entries.length]);
+
+  // Keyboard controls
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === " " && !pendingEvent) {
+        e.preventDefault();
+        skipAhead();
+      }
+      if (e.key === "d" || e.key === "D") {
+        if (!pendingEvent) setDashboardOpen((prev) => !prev);
+      }
+      if (e.key === "Escape") {
+        if (dashboardOpen) setDashboardOpen(false);
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [pendingEvent, dashboardOpen, skipAhead]);
 
   if (timelineState === "dead") {
     return (
@@ -150,22 +172,22 @@ function TimelineView() {
       style={stageStyle}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-2 border-b border-foreground/10 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-2 sm:px-4 py-2 border-b border-foreground/10 backdrop-blur-sm">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <span
-            className="text-sm font-medium"
+            className="text-xs sm:text-sm font-medium shrink-0"
             style={{ color: "var(--stage-primary)" }}
           >
             Age {currentAge}
           </span>
-          <span className="text-sm text-zinc-500">
+          <span className="text-xs sm:text-sm text-zinc-500 shrink-0">
             {stage.displayName}
           </span>
-          <span className="text-sm text-zinc-400">
+          <span className="text-xs sm:text-sm text-zinc-400 truncate hidden sm:inline">
             {character.identity.location}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
             onClick={togglePause}
             className="px-3 py-1 text-xs rounded border border-foreground/20 hover:bg-foreground/5"
@@ -303,7 +325,7 @@ function MajorEventOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="max-w-lg w-full mx-4 bg-background rounded-2xl p-6 shadow-2xl space-y-5">
+      <div className="max-w-lg w-full mx-3 sm:mx-4 bg-background rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Dialogue lines (visual novel format) */}
         {dialogue.length > 0 && (
           <div className="space-y-3">
@@ -373,7 +395,7 @@ function MiniNarrativeOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="max-w-lg w-full mx-4 bg-background rounded-2xl p-6 shadow-2xl space-y-5">
+      <div className="max-w-lg w-full mx-3 sm:mx-4 bg-background rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto">
         {/* Page counter */}
         <div className="flex justify-between items-center">
           <span className="text-xs text-foreground/30">
