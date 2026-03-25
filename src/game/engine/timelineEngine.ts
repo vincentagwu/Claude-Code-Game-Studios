@@ -15,6 +15,13 @@ import { processDelayedEffects, type DelayedEffectResult } from "../state/delaye
 import { generateEventsForYear, type EventHistory, recordEventFired } from "./lifeEventGenerator";
 import { resolveTemplate } from "../events/resolveTemplate";
 import { TUNING } from "../state/config";
+import {
+  shouldGenerateNpc,
+  generateNpc,
+  checkPhaseTransitions,
+  applyRelationshipDecay,
+  generateRelationshipEntries,
+} from "../relationships/relationshipTracker";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -111,6 +118,43 @@ export function processYearTick(
   // 3. APPLY PASSIVE DRIFTS
   store.resetYearTracking();
   store.applyPassiveDrifts();
+
+  // 3.5. RELATIONSHIP PROCESSING
+  const charAfterDrifts = useGameStore.getState().character!;
+  const prevRelationships = [...charAfterDrifts.relationships.map((r) => ({ ...r }))];
+
+  // Maybe generate a new NPC
+  const meetingTexts: string[] = [];
+  const npcCheck = shouldGenerateNpc(charAfterDrifts, currentStage.name, rng);
+  if (npcCheck) {
+    const { relationship: newRel, meetingText } = generateNpc(
+      charAfterDrifts, npcCheck.type, currentStage.name, rng
+    );
+    useGameStore.setState({
+      character: {
+        ...useGameStore.getState().character!,
+        relationships: [...useGameStore.getState().character!.relationships, newRel],
+      },
+    });
+    meetingTexts.push(meetingText);
+  }
+
+  // Apply phase-aware decay (replaces the basic decay in applyPassiveDrifts)
+  const currentChar = useGameStore.getState().character!;
+  const { updated: decayedRels, entries: decayTexts } = applyRelationshipDecay(
+    currentChar.relationships,
+    store.relationshipsActiveThisYear
+  );
+  useGameStore.setState({
+    character: { ...useGameStore.getState().character!, relationships: decayedRels },
+  });
+
+  // Check phase transitions
+  const transitions = checkPhaseTransitions(prevRelationships, decayedRels, rng);
+
+  // Add relationship timeline entries
+  const relEntries = generateRelationshipEntries(transitions, meetingTexts, decayTexts, newAge);
+  entries.push(...relEntries);
 
   // 4. PROCESS DELAYED EFFECTS
   const { results: echoResults, updatedQueue } = processDelayedEffects(

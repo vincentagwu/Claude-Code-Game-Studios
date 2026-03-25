@@ -217,6 +217,19 @@ function calculateRelevance(event: LifeEvent, state: CharacterState): number {
     if (state.attributes.education > 60) score += 0.15;
   }
 
+  // Relationship-aware boosting
+  const activeRels = state.relationships.filter((r) => r.status === "active");
+  const hasRomantic = activeRels.some((r) => r.type === "romantic");
+  const hasFriends = activeRels.some((r) => r.type === "friend");
+  const isIsolated = activeRels.length <= 1;
+
+  if (event.category === "romance" && hasRomantic) score += 0.25;
+  if (event.category === "friendships" && hasFriends) score += 0.2;
+  if (event.category === "romance" && !hasRomantic) score += 0.1; // slight boost to find romance
+  if (isIsolated && (event.category === "friendships" || event.category === "community")) {
+    score += 0.3; // lonely characters get more social opportunities
+  }
+
   return score;
 }
 

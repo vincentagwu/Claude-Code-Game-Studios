@@ -142,16 +142,30 @@ export function DashboardPanel({ isOpen, onClose }: DashboardPanelProps) {
                   .sort((a, b) => b.closeness - a.closeness)
                   .slice(0, 8)
                   .map((r) => (
-                    <div key={r.id} className="flex justify-between text-sm">
-                      <span className="text-foreground/60">
-                        {r.name}
-                        <span className="text-foreground/30 ml-1 text-xs">
-                          ({r.type})
+                    <div key={r.id} className="space-y-0.5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-foreground/60">
+                          {r.name}
+                          <span className="text-foreground/30 ml-1 text-xs">
+                            ({r.type})
+                          </span>
                         </span>
-                      </span>
-                      <span className="font-medium">
-                        {getClosenessLabel(r.closeness)}
-                      </span>
+                        <span className="font-medium text-xs">
+                          {getClosenessLabel(r.closeness)}
+                        </span>
+                      </div>
+                      {r.traits.length > 0 && (
+                        <div className="flex gap-1 ml-0">
+                          {r.traits.slice(0, 3).map((t) => (
+                            <span
+                              key={t}
+                              className="text-[10px] px-1.5 py-0 rounded-full bg-foreground/[0.04] text-foreground/40"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>
