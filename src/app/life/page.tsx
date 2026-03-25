@@ -15,6 +15,8 @@ import { CRISIS_EVENTS } from "@/game/data/crisisEvents";
 import { MORE_CHILDHOOD_MINOR, MORE_CHILDHOOD_MAJOR } from "@/game/data/moreChildhoodEvents";
 import { MILESTONE_EVENTS } from "@/game/data/milestoneEvents";
 import { ADULT_MINOR_EVENTS } from "@/game/data/adultMinorEvents";
+import { RELATIONSHIP_MAJOR_EVENTS } from "@/game/data/relationshipMajorEvents";
+import { RELATIONSHIP_MINOR_EVENTS } from "@/game/data/relationshipMinorEvents";
 import type { LifeEvent } from "@/game/events/types";
 import type { TimelineEntry } from "@/game/engine/timelineEngine";
 
@@ -29,6 +31,8 @@ const ALL_EVENTS: readonly LifeEvent[] = [
   ...CRISIS_EVENTS,
   ...MILESTONE_EVENTS,
   ...ADULT_MINOR_EVENTS,
+  ...RELATIONSHIP_MAJOR_EVENTS,
+  ...RELATIONSHIP_MINOR_EVENTS,
   ...FALLBACK_EVENTS,
 ];
 

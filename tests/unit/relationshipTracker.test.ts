@@ -124,10 +124,11 @@ describe("generateNpc", () => {
     expect(meetingText.length).toBeGreaterThan(0);
   });
 
-  it("generates romantic NPCs with different text", () => {
+  it("generates romantic NPCs with distinct meeting text", () => {
     const state = makeState();
     const { meetingText } = generateNpc(state, "romantic", "youngAdult");
-    expect(meetingText).toContain("felt different");
+    // Romantic meetings mention "Something about them"
+    expect(meetingText).toContain("Something about them");
   });
 
   it("does not generate NPC with same name as player", () => {
