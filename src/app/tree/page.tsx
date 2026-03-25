@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { loadLifeTree } from "@/game/tree/lifeTreeStore";
 import { useGameStore } from "@/game/state/useGameStore";
 import { deserialize, serialize } from "@/game/state/serialization";
+import { TreeGraph } from "@/components/TreeGraph";
 import type { LifeRecord, BranchPoint } from "@/game/tree/types";
-import type { CharacterState } from "@/game/state/types";
 
 export default function TreeExplorer() {
   const router = useRouter();
@@ -69,18 +69,15 @@ export default function TreeExplorer() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Tree visualization */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          <div className="max-w-2xl mx-auto space-y-4">
-            {lives.map((life) => (
-              <LifeNode
-                key={life.id}
-                life={life}
-                isSelected={selectedLife?.id === life.id}
-                onSelect={() => setSelectedLife(selectedLife?.id === life.id ? null : life)}
-              />
-            ))}
-          </div>
+        {/* SVG Tree visualization */}
+        <div className="flex-1 overflow-auto px-4 py-6">
+          <TreeGraph
+            lives={lives}
+            selectedId={selectedLife?.id ?? null}
+            onSelect={(life) =>
+              setSelectedLife(selectedLife?.id === life.id ? null : life)
+            }
+          />
         </div>
 
         {/* Detail panel */}
@@ -93,81 +90,6 @@ export default function TreeExplorer() {
         )}
       </div>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Life node in the tree
-// ---------------------------------------------------------------------------
-
-function LifeNode({
-  life,
-  isSelected,
-  onSelect,
-}: {
-  life: LifeRecord;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  const branchCount = life.branchPoints.length;
-  const unexplored = life.branchPoints.filter((bp) => !bp.explored).length;
-
-  return (
-    <button
-      onClick={onSelect}
-      className={`w-full text-left p-4 rounded-xl border transition-colors ${
-        isSelected
-          ? "border-foreground/30 bg-foreground/5"
-          : "border-foreground/10 hover:border-foreground/20 hover:bg-foreground/[0.02]"
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold">{life.name}</h3>
-          <p className="text-xs text-foreground/50 mt-0.5">
-            Lived to {life.deathAge} · {life.epitaph.headline}
-          </p>
-        </div>
-        <div className="text-right shrink-0 ml-4">
-          {branchCount > 0 && (
-            <span className="text-xs text-foreground/40">
-              {branchCount} {branchCount === 1 ? "branch" : "branches"}
-              {unexplored > 0 && (
-                <span className="ml-1 text-amber-500">
-                  ({unexplored} unexplored)
-                </span>
-              )}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Branch point timeline */}
-      {isSelected && branchCount > 0 && (
-        <div className="mt-3 pt-3 border-t border-foreground/10 space-y-1">
-          {life.branchPoints.map((bp) => (
-            <div
-              key={bp.id}
-              className="flex items-center gap-2 text-xs text-foreground/50"
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  bp.explored ? "bg-foreground/20" : "bg-amber-400"
-                }`}
-              />
-              <span>
-                Age {bp.age}: chose &ldquo;{bp.chosenOptionId.replace(/_/g, " ")}&rdquo;
-              </span>
-              {!bp.explored && (
-                <span className="text-amber-500 ml-auto">
-                  {bp.alternateOptionIds.length} path{bp.alternateOptionIds.length !== 1 ? "s" : ""} not taken
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </button>
   );
 }
 

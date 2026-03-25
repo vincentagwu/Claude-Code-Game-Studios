@@ -19,7 +19,7 @@ describe("relationship major events", () => {
   it("all events have at least 2 choices", () => {
     for (const event of RELATIONSHIP_MAJOR_EVENTS) {
       const content = event.content;
-      const choices = "choices" in content ? content.choices : "pages" in content ? content.choices : [];
+      const choices = "choices" in content ? (content as unknown as { choices: readonly unknown[] }).choices : [];
       expect(choices.length).toBeGreaterThanOrEqual(2);
     }
   });
